@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini WhatsApp</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <header class="navbar">
+        <div class="logo">Mini WhatsApp</div>
+        <div class="chat-count">
+            Total Chats: <span><%= chats.length %></span>
+        </div>
+    </header>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <input type="text" placeholder="Search chats..." id="searchInput">
+    </div>
+
+    <!-- Chat List -->
+    <main class="chat-container">
+        <% chats.forEach(chat => { %>
+            <div class="chat-card">
+                
+                <div class="chat-header">
+                    <div class="avatar">
+                        <%= chat.from.charAt(0).toUpperCase() %>
+                    </div>
+                    <div class="user-info">
+                        <h3><%= chat.from %></h3>
+                        <small>To: <%= chat.to %></small>
+                    </div>
+                    <div class="time">
+                        <%= new Date(chat.createdAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata'}) %>
+                    </div>
+                </div>
+
+                <div class="chat-message">
+                    <%= chat.msg %>
+                </div>
+                  <div class="view-more">
+                    <a href="/chats/<%= chat._id %>" class="view-btn">View more</a>
+                    </div>
+            </div>
+          
+        <% }) %>
+    </main>
+
+    <!-- Floating Button -->
+    <button class="floating-btn" onclick="window.location.href='/chats/new'">+</button>
+
+</body>
+</html>

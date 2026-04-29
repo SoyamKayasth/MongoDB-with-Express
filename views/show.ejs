@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Details</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #ece5dd;
+  padding: 30px;
+}
+
+/* Container */
+.container {
+  max-width: 700px;
+  margin: auto;
+}
+
+/* Chat Card */
+.chat-detail {
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.chat-detail h2 {
+  margin-bottom: 20px;
+  color: #075e54;
+}
+
+.info-row {
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.message-box {
+  margin-top: 10px;
+  background: #dcf8c6;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  word-wrap: break-word;
+}
+
+/* Meta Info */
+.meta {
+  margin-top: 15px;
+  font-size: 13px;
+  color: gray;
+}
+
+/* Buttons */
+.chat-actions {
+  margin-top: 20px;
+}
+
+button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: 0.2s ease;
+}
+
+.edit-btn {
+  background: #128c7e;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #0f7568;
+}
+
+.delete-btn {
+  background: #e74c3c;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #c0392b;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.edit-modal {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.3s ease;
+}
+
+.edit-modal h3 {
+  margin-bottom: 15px;
+}
+
+.edit-modal input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.edit-modal input:focus {
+  border-color: #25d366;
+  outline: none;
+}
+
+.update-btn {
+  background: #25d366;
+  color: white;
+  width: 100%;
+}
+
+.update-btn:hover {
+  background: #1ebe5d;
+}
+
+.close-btn {
+  background: #ccc;
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* Character Counter */
+.char-count {
+  font-size: 12px;
+  color: gray;
+  text-align: right;
+  margin-bottom: 10px;
+}
+.edit-modal textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  resize: none;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: 0.2s ease;
+}
+
+.edit-modal textarea:focus {
+  border-color: #25d366;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2);
+}
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0;}
+  to { transform: translateY(0); opacity: 1;}
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  body { padding: 15px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="chat-detail">
+    <h2>Chat Details</h2>
+
+    <div class="info-row"><strong>From:</strong> <%= chat.from %></div>
+    <div class="info-row"><strong>To:</strong> <%= chat.to %></div>
+
+    <div class="message-box">
+      <%= chat.msg %>
+    </div>
+
+    <div class="meta">
+      Sent on 
+      <%= new Date(chat.createdAt).toLocaleString('en-IN', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        timeZone: 'Asia/Kolkata'
+      }) %>
+    </div>
+
+    <div class="chat-actions">
+      <button class="edit-btn">Edit</button>
+
+      <form action="/chats/<%= chat._id %>?_method=DELETE" 
+            method="POST" 
+            style="display:inline;"
+            onsubmit="return confirmDelete()">
+        <button type="submit" class="delete-btn">Delete</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="edit-modal">
+    <h3>Edit Message</h3>
+
+    <form action="/chats/<%= chat._id %>?_method=PUT" method="POST">
+      
+      <textarea 
+        id="editInput" 
+        name="newMsg" 
+        rows="4" 
+        required
+      ><%= chat.msg %></textarea>
+
+      <div class="char-count" id="charCount"></div>
+
+      <button type="submit" class="update-btn">Update Message</button>
+    </form>
+
+    <button class="close-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+<script>
+const editBtn = document.querySelector('.edit-btn');
+const modal = document.getElementById('modal');
+const editInput = document.getElementById('editInput');
+const charCount = document.getElementById('charCount');
+
+editBtn.addEventListener('click', () => {
+  modal.style.display = 'flex';
+  updateCount();
+  autoResize();
+});
+
+function closeModal() {
+  modal.style.display = 'none';
+}
+
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    closeModal();
+  }
+});
+
+/* Character counter */
+editInput.addEventListener('input', () => {
+  updateCount();
+  autoResize();
+});
+
+function updateCount() {
+  charCount.textContent = editInput.value.length + " characters";
+}
+
+/* Auto resize textarea */
+function autoResize() {
+  editInput.style.height = "auto";
+  editInput.style.height = editInput.scrollHeight + "px";
+}
+
+/* Confirm delete */
+function confirmDelete() {
+  return confirm("Are you sure you want to delete this chat?");
+}
+</script>
+
+</body>
+</html>
