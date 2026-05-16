@@ -2,10 +2,10 @@
   const mongoose = require('mongoose');
   const { schema } = mongoose;
   const methodOverride = require('method-override');
+  const ExpressError = require('./ExpressError');
     const app = express();
     const port = 3000;
     const path = require('path');
- 
     const Chat = require('./models/chat');  // Importing the Chat model
 
   // Middleware setup
@@ -29,27 +29,33 @@ async function main(){
 }
 
 
+// Creating an asyncWrap function to handle asynchronous errors in route handlers 
+     function asyncWrap(fn){
+           return function(req , res , next){
+               fn(req , res , next).catch(err => next(err)); // Catch any errors thrown by the async function and pass them to the next middleware (error handler)
+           }
+     }  
+    
+
+
 // Basic route to test the server
    app.get('/' , (req , res) => {
          res.send('Welcome to my server'); 
     });
     
     // Index route to show all chat messages
-    app.get('/chats', async (req, res) => {
-        try {
+    app.get('/chats', asyncWrap( async (req , res, next) => {
+       
             const chats = await Chat.find().sort({ createdAt: -1 }); // Fetch all chats sorted by creation date
             res.render('index', { chats }); // Render the index view with the chats data
-        } 
-        catch (err) { 
-            console.log(err);
-            res.status(500).send('Server Error');
-        }
-    });
+
+    }));
 
 
    // Route to show the form for creating a new chat message
 
       app.get('/chats/new', (req , res) => {
+    
         res.render('new'); // Render the form to create a new chat message
       });    
         
@@ -71,23 +77,22 @@ async function main(){
     
 // to display a chat message in detail when the "View more" button is clicked
 
-   app.get("/chats/:id", async(req , res) => {
+   app.get("/chats/:id", asyncWrap( async(req , res , next) => {
          const {id} = req.params; // Extract the chat ID from the request parameters
-         try {
+        
              const chat = await Chat.findById(id); // Find the chat message by its ID
              if (!chat) {
-                 return res.status(404).send('Chat not found');
+                // return res.status(404).send('Chat not found');
+             return next(new ExpressError(404 , "Chat not found"));
              }
              res.render('show.ejs', { chat }); // Render the show view with the chat data
-         } catch (err) {
-             console.log(err);
-             res.status(500).send('Server Error');
-         }
-   });
+
+   }));
 
    // Route to handle the update of a chat message when the "Edit" button is clicked
 
-   app.put('/chats/:id', async (req , res) => {
+   app.put('/chats/:id', asyncWrap( async (req , res , next) => {
+
        const {id} = req.params;
         const {newMsg} = req.body; 
 
@@ -100,25 +105,39 @@ async function main(){
          );
               console.log(updatedChat);
 
-               res.redirect('/chats');
-   });
+               res.redirect('/chats'); 
+      
+   }));
 
   // Route to handle the deletion of a chat message when the "Delete" button is clicked 
       
-     app.delete("/chats/:id" , async (req , res) => {     
+     app.delete("/chats/:id" , asyncWrap(async (req , res , next) => {     
            const {id} = req.params; // Extract the chat ID from the request parameters
              
           await Chat.findByIdAndDelete(id) // Find the chat message by its ID and delete it from the database
                 .then(() => {   
                     console.log('Chat deleted successfully');
-                    res.redirect('/chats'); // Redirect to the chats index page after deletion
+                    
+                         res.status(200).json({ message: "Chat is deleted Successfully!" });
+
+                    // res.redirect('/chats'); // Redirect to the chats index page after deletion
                 }) 
                 .catch(err => {
                     console.log(err);
-                    res.status(500).send('Error deleting chat');
+//                    res.status(500).send('Error deleting chat');
+                    next(err);
                 });         
                     
-     });
+     }));
+
+// creating a error handler middleware to handle any errors that may occur during the request processing
+
+    app.use((err , req, res , next) => {
+      let { status = 500 , message = "Something went wrong" }  = err;
+
+          res.status(status).send(message);
+        });
+
 
 
 
